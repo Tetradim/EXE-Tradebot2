@@ -93,3 +93,41 @@ API_KEY=your-secret-here  # Optional for dev mode
 # Frontend (.env)
 EXPO_PUBLIC_BACKEND_URL=https://your-app.preview.emergentagent.com
 ```
+
+## CI/CD Workflows
+
+### GitHub Actions Setup
+Two workflows have been configured in `.github/workflows/`:
+
+#### 1. `ci.yml` - Continuous Integration
+Runs on every push/PR to main/master:
+- **Backend:** Ruff linting, Pyright type checking, pytest
+- **Frontend:** ESLint, TypeScript checking
+- **Desktop:** JS syntax verification, security flag checks
+
+#### 2. `build-windows.yml` - Windows EXE Build
+Automatically builds Windows executable on every push:
+
+**Triggers:**
+- Push to main/master branches
+- Pull requests to main/master
+- Manual trigger via workflow_dispatch
+
+**Build Process:**
+1. Set up Python 3.11 and Node.js 20
+2. Install backend dependencies + PyInstaller
+3. Build Python backend as single EXE with PyInstaller
+4. Build Expo web frontend
+5. Build Electron Windows app (NSIS installer + Portable)
+
+**Outputs:**
+- `TradingBot-Windows-Installer` - NSIS installer artifact
+- `TradingBot-Windows-Portable` - Portable EXE artifact
+
+**Creating Releases:**
+- Push a tag starting with `v` (e.g., `v1.0.0`) to auto-create GitHub Release
+- Or manually trigger workflow with "Create a GitHub Release" option
+
+### No Secrets Required
+The workflow uses `GITHUB_TOKEN` which is automatically provided by GitHub Actions.
+

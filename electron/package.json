@@ -24,12 +24,12 @@
     "files": [
       "main.js",
       "preload.js",
+      "renderer.js",
       "index.html",
       "error.html",
-      "renderer.js",
+      "styles.css",
       "assets/**/*",
-      "web-dist/**/*",
-      "installer.nsh"
+      "web-dist/**/*"
     ],
     "extraResources": [
       {
@@ -55,15 +55,14 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "menuCategory": "Trading Bot",
-      "include": "installer.nsh"
+      "menuCategory": "Trading Bot"
     },
     "portable": {
       "artifactName": "TradingBot-Portable.exe"

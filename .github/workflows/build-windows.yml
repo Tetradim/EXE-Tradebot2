@@ -1,0 +1,137 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Create a GitHub Release'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: electron/yarn.lock
+
+      - name: Install Python dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Python backend with PyInstaller
+        working-directory: backend
+        run: |
+          python -m PyInstaller `
+            --name server `
+            --onefile `
+            --add-data "broker_clients;broker_clients" `
+            --add-data "models;models" `
+            --add-data "utils;utils" `
+            --add-data "routes;routes" `
+            --add-data "database;database" `
+            --hidden-import uvicorn.logging `
+            --hidden-import uvicorn.loops `
+            --hidden-import uvicorn.loops.auto `
+            --hidden-import uvicorn.protocols `
+            --hidden-import uvicorn.protocols.http `
+            --hidden-import uvicorn.protocols.http.auto `
+            --hidden-import uvicorn.protocols.websockets `
+            --hidden-import uvicorn.protocols.websockets.auto `
+            --hidden-import uvicorn.lifespan `
+            --hidden-import uvicorn.lifespan.on `
+            --hidden-import aiosqlite `
+            --hidden-import motor `
+            --hidden-import pymongo `
+            --hidden-import discord `
+            --hidden-import aiohttp `
+            server.py
+
+      - name: Copy backend executable
+        run: |
+          New-Item -ItemType Directory -Force -Path electron/backend-dist
+          Copy-Item backend/dist/server.exe electron/backend-dist/
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: yarn install --frozen-lockfile
+
+      - name: Build frontend for web
+        working-directory: frontend
+        run: npx expo export --platform web
+
+      - name: Copy web build to Electron
+        run: |
+          New-Item -ItemType Directory -Force -Path electron/web-dist
+          Copy-Item -Recurse frontend/dist/* electron/web-dist/
+
+      - name: Install Electron dependencies
+        working-directory: electron
+        run: yarn install --frozen-lockfile
+
+      - name: Create icon.ico if missing
+        working-directory: electron
+        run: |
+          if (!(Test-Path "assets/icon.ico")) {
+            Write-Host "icon.ico not found, build will use default icon"
+          }
+
+      - name: Build Windows Electron app
+        working-directory: electron
+        run: yarn build
+
+      - name: List build artifacts
+        run: |
+          Get-ChildItem -Recurse electron/dist/*.exe | Select-Object FullName, Length
+
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: TradingBot-Windows-Installer
+          path: electron/dist/*.exe
+          retention-days: 30
+
+      - name: Upload Portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: TradingBot-Windows-Portable
+          path: electron/dist/TradingBot-Portable.exe
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: github.event.inputs.release == 'true' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            electron/dist/*.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
