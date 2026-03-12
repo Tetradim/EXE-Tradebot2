@@ -1,0 +1,203 @@
+// renderer.js — Trading Bot Desktop UI
+// FIX: removed axios dependency (now uses fetch).
+// FIX: health check polls /api/health (auth-exempt), not /api/status (401).
+
+let BACKEND_URL = 'http://localhost:8001';
+let API_KEY = '';
+
+// ── Bootstrap: get real backend URL + API key from Electron ─────────────────
+async function bootstrap() {
+  if (window.electronAPI) {
+    try {
+      BACKEND_URL = (await window.electronAPI.getBackendUrl()) || BACKEND_URL;
+      // API key injected via URL param by main.js when security is enabled
+      const params = new URLSearchParams(window.location.search);
+      API_KEY = params.get('apikey') || '';
+      if (API_KEY) history.replaceState(null, '', window.location.pathname);
+    } catch (e) {
+      console.warn('Not running in Electron context:', e);
+    }
+  }
+}
+
+// ── API helper ───────────────────────────────────────────────────────────────
+async function api(endpoint, method = 'GET', body = null) {
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (API_KEY) headers['X-API-Key'] = API_KEY;
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${BACKEND_URL}/api${endpoint}`, opts);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error(`API error [${endpoint}]:`, err);
+    return null;
+  }
+}
+
+// ── DOM element references ───────────────────────────────────────────────────
+const el = id => document.getElementById(id);
+
+// ── Formatters ───────────────────────────────────────────────────────────────
+function fmt$(v) {
+  const n = parseFloat(v) || 0;
+  return (n >= 0 ? '+' : '') + '$' + Math.abs(n).toFixed(2);
+}
+function fmtTime(ts) {
+  if (!ts) return '-';
+  return new Date(ts).toLocaleTimeString();
+}
+
+// ── Connection badge ─────────────────────────────────────────────────────────
+async function checkConnection() {
+  try {
+    // FIX: /api/health is explicitly auth-exempt in the backend middleware
+    const headers = {};
+    if (API_KEY) headers['X-API-Key'] = API_KEY;
+    const res = await fetch(`${BACKEND_URL}/api/health`, { headers });
+    const ok  = res.status === 200;
+    const badge = el('connection-status');
+    badge.textContent  = ok ? 'Connected' : 'Disconnected';
+    badge.className    = `status-badge ${ok ? 'connected' : 'disconnected'}`;
+    return ok;
+  } catch {
+    const badge = el('connection-status');
+    badge.textContent = 'Disconnected';
+    badge.className   = 'status-badge disconnected';
+    return false;
+  }
+}
+
+// ── Data loaders ─────────────────────────────────────────────────────────────
+async function loadPortfolio() {
+  const d = await api('/portfolio');
+  if (!d) return;
+  const total = d.total_pnl || 0;
+  const totalEl = el('total-pnl');
+  totalEl.textContent = fmt$(total);
+  totalEl.className   = `pnl-value ${total >= 0 ? 'positive' : 'negative'}`;
+  el('realized-pnl').textContent   = fmt$(d.total_realized_pnl);
+  el('unrealized-pnl').textContent = fmt$(d.total_unrealized_pnl);
+  el('win-rate').textContent       = (d.win_rate || 0).toFixed(1) + '%';
+}
+
+async function loadStatus() {
+  const d = await api('/status');
+  if (!d) return;
+
+  const discordEl = el('discord-status');
+  discordEl.textContent = d.discord_connected ? 'Connected' : 'Disconnected';
+  discordEl.className   = `status-indicator ${d.discord_connected ? 'connected' : 'disconnected'}`;
+
+  el('active-broker-name').textContent = (d.active_broker || 'Broker').toUpperCase();
+  const brokerEl = el('broker-status');
+  brokerEl.textContent = d.broker_connected ? 'Connected' : 'Not Connected';
+  brokerEl.className   = `status-indicator ${d.broker_connected ? 'connected' : 'disconnected'}`;
+
+  el('auto-trading-toggle').checked = d.auto_trading_enabled || false;
+}
+
+async function loadSettings() {
+  const [risk, trail, avg, shutdown] = await Promise.all([
+    api('/risk-management-settings'),
+    api('/trailing-stop-settings'),
+    api('/averaging-down-settings'),
+    api('/auto-shutdown-settings'),
+  ]);
+  if (risk)     { el('take-profit-toggle').checked = risk.take_profit_enabled || false;
+                  el('stop-loss-toggle').checked   = risk.stop_loss_enabled   || false; }
+  if (trail)    { el('trailing-stop-toggle').checked    = trail.trailing_stop_enabled     || false; }
+  if (avg)      { el('averaging-down-toggle').checked   = avg.averaging_down_enabled      || false; }
+  if (shutdown) { el('auto-shutdown-toggle').checked    = shutdown.auto_shutdown_enabled  || false; }
+}
+
+async function loadAlerts() {
+  const alerts = await api('/alerts?limit=5');
+  const list = el('alerts-list');
+  if (alerts && alerts.length) {
+    list.innerHTML = alerts.map(a => `
+      <div class="activity-item">
+        <div>
+          <span class="ticker">${a.ticker || 'N/A'}</span>
+          <span class="details">${a.strike || ''} ${a.option_type || ''}</span>
+        </div>
+        <span class="time">${fmtTime(a.timestamp)}</span>
+      </div>`).join('');
+  } else {
+    list.innerHTML = '<p class="empty-state">No recent alerts</p>';
+  }
+}
+
+async function loadTrades() {
+  const trades = await api('/trades?limit=5');
+  const list = el('trades-list');
+  if (trades && trades.length) {
+    list.innerHTML = trades.map(t => `
+      <div class="activity-item">
+        <div>
+          <span class="ticker">${t.ticker || 'N/A'}</span>
+          <span class="details">${t.side || 'BUY'} ${t.quantity || 1}x @ $${(t.entry_price || 0).toFixed(2)}</span>
+        </div>
+        <span class="time">${fmtTime(t.created_at)}</span>
+      </div>`).join('');
+  } else {
+    list.innerHTML = '<p class="empty-state">No recent trades</p>';
+  }
+}
+
+// ── Toggle event wiring ──────────────────────────────────────────────────────
+function setupToggles() {
+  el('auto-trading-toggle').addEventListener('change',    () => api('/toggle-trading',       'POST'));
+  el('take-profit-toggle').addEventListener('change',     () => api('/toggle-take-profit',   'POST'));
+  el('stop-loss-toggle').addEventListener('change',       () => api('/toggle-stop-loss',     'POST'));
+  el('trailing-stop-toggle').addEventListener('change',   () => api('/toggle-trailing-stop', 'POST'));
+  el('averaging-down-toggle').addEventListener('change',  () => api('/toggle-averaging-down','POST'));
+  el('auto-shutdown-toggle').addEventListener('change',   () => api('/toggle-auto-shutdown', 'POST'));
+}
+
+// ── App info ─────────────────────────────────────────────────────────────────
+async function loadAppInfo() {
+  if (!window.electronAPI) return;
+  try {
+    el('app-version').textContent = await window.electronAPI.getAppVersion() || '1.0.0';
+    el('data-path').textContent   = await window.electronAPI.getDataPath()   || '-';
+  } catch (e) { console.log('Could not load app info:', e); }
+}
+
+// ── Main refresh cycle ───────────────────────────────────────────────────────
+async function refresh() {
+  const ok = await checkConnection();
+  if (ok) await Promise.all([loadPortfolio(), loadStatus(), loadSettings(), loadAlerts(), loadTrades()]);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await bootstrap();
+  await loadAppInfo();
+  setupToggles();
+
+  // Drive splash screen while waiting for first successful connection
+  setSplash('Waiting for backend...');
+  let attempts = 0;
+  const MAX = 30;
+  while (attempts < MAX) {
+    const ok = await checkConnection();
+    if (ok) break;
+    attempts++;
+    setSplash(`Starting backend... (${attempts}/${MAX})`);
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  hideSplash();
+  await refresh();
+  setInterval(refresh, 5000);
+});
+
+// ── Splash helpers (called before DOMContentLoaded fires) ────────────────────
+function setSplash(msg) {
+  if (window.__setSplashStatus) window.__setSplashStatus(msg);
+}
+function hideSplash() {
+  if (window.__hideSplash) window.__hideSplash();
+}

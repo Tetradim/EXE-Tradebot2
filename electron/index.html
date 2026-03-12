@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:*; frame-src 'self';">
+  <title>Trading Bot</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; font-family: sans-serif; height: 100vh; overflow: hidden; }
+
+    #splash {
+      position: fixed; inset: 0; z-index: 999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #0f172a; color: #94a3b8; gap: 16px;
+    }
+    #splash h2 { color: #e2e8f0; margin: 0; font-size: 1.4rem; }
+    #splash-status { font-size: 0.875rem; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #1e293b; border-top-color: #3b82f6;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #splash.hidden { display: none; }
+
+    #app-frame {
+      display: none;
+      width: 100vw; height: 100vh;
+      border: none;
+    }
+    #app-frame.visible { display: block; }
+  </style>
+</head>
+<body>
+  <div id="splash">
+    <div class="spinner"></div>
+    <h2>Trading Bot</h2>
+    <span id="splash-status">Starting backend...</span>
+  </div>
+
+  <!-- The Expo web app loads here once the backend is ready -->
+  <iframe id="app-frame" src="" allow="clipboard-read; clipboard-write"></iframe>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

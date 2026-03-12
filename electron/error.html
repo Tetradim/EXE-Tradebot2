@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Bot — Error</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a; color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 24px; min-height: 100vh;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    h2 { color: #f87171; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+    .error-box {
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      padding: 16px; font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.8rem; line-height: 1.6; color: #fca5a5;
+      white-space: pre-wrap; word-break: break-all;
+      user-select: text; cursor: text;
+      max-height: 60vh; overflow-y: auto; flex: 1;
+    }
+    .hint { color: #64748b; font-size: 0.75rem; }
+    .buttons { display: flex; gap: 10px; }
+    button {
+      padding: 8px 20px; border: none; border-radius: 6px;
+      cursor: pointer; font-size: 0.875rem; font-weight: 500;
+    }
+    #copy-btn  { background: #3b82f6; color: white; }
+    #copy-btn:hover { background: #2563eb; }
+    #copy-btn.copied { background: #22c55e; }
+    #close-btn { background: #334155; color: #e2e8f0; }
+    #close-btn:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <h2>⚠️ Trading Bot — Startup Error</h2>
+  <p class="hint">Select and copy the error below to share for support:</p>
+  <div class="error-box" id="error-text">Loading...</div>
+  <div class="buttons">
+    <button id="copy-btn">Copy Error</button>
+    <button id="close-btn">Close</button>
+  </div>
+  <script>
+    // Error message is passed via the window title / URL hash from main.js
+    const params = new URLSearchParams(window.location.search);
+    const msg = params.get('msg') || 'Unknown error';
+    document.getElementById('error-text').textContent = decodeURIComponent(msg);
+
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(decodeURIComponent(msg)).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy Error'; btn.classList.remove('copied'); }, 2000);
+      });
+    });
+
+    document.getElementById('close-btn').addEventListener('click', () => {
+      window.close();
+    });
+  </script>
+</body>
+</html>

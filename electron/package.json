@@ -1,0 +1,77 @@
+{
+  "name": "tradebot-desktop",
+  "version": "1.0.0",
+  "description": "Trading Bot Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder build --win --publish never",
+    "build:dir": "electron-builder build --win --dir --publish never"
+  },
+  "author": "Trading Bot",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {},
+  "build": {
+    "appId": "com.tradebot.desktop",
+    "productName": "Trading Bot",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "error.html",
+      "renderer.js",
+      "assets/**/*",
+      "web-dist/**/*",
+      "installer.nsh"
+    ],
+    "extraResources": [
+      {
+        "from": "backend-dist",
+        "to": "backend",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "menuCategory": "Trading Bot",
+      "include": "installer.nsh"
+    },
+    "portable": {
+      "artifactName": "TradingBot-Portable.exe"
+    },
+    "publish": null
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tetradim/EXE-Tradebot2"
+  }
+}
