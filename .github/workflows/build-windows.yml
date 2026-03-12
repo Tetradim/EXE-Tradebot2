@@ -82,6 +82,17 @@ jobs:
         working-directory: frontend
         run: npx expo export --platform web
 
+      - name: Fix Expo paths for Electron
+        working-directory: frontend/dist
+        run: |
+          Get-ChildItem -Recurse -Filter "*.html" | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            $content = $content -replace 'src="/_expo', 'src="./_expo'
+            $content = $content -replace 'href="/_expo', 'href="./_expo'
+            Set-Content $_.FullName -Value $content
+          }
+          Write-Host "Fixed absolute paths to relative paths in HTML files"
+
       - name: Copy web build to Electron
         run: |
           New-Item -ItemType Directory -Force -Path electron/web-dist

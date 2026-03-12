@@ -10,10 +10,10 @@ function setSplash(msg) {
 }
 
 function showApp() {
+  // Hide splash and redirect to the Expo web app
   document.getElementById('splash').classList.add('hidden');
-  const frame = document.getElementById('app-frame');
-  frame.src = 'web-dist/index.html';
-  frame.classList.add('visible');
+  // Navigate directly to the web-dist index.html
+  window.location.href = 'web-dist/index.html';
 }
 
 function escapeHtml(text) {
