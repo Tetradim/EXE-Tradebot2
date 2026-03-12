@@ -97,6 +97,7 @@ export default function Dashboard() {
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showBrokerPicker, setShowBrokerPicker] = useState(false);
+  const [error, setError]           = useState<string | null>(null);
 
   // Toggles
   const [autoTrading, setAutoTrading]       = useState(false);
@@ -118,6 +119,7 @@ export default function Dashboard() {
 
   const fetchData = useCallback(async () => {
     try {
+      setError(null);
       const [statusRes, alertsRes, tradesRes, brokersRes, portfolioRes,
              avgRes, riskRes, trailRes, shutRes, bufRes] = await Promise.all([
         api.get(`${BACKEND_URL}/api/status`),
@@ -157,7 +159,10 @@ export default function Dashboard() {
       setPremiumBuffer(bufRes.data.premium_buffer_enabled);
       setPremiumBufferAmt(bufRes.data.premium_buffer_amount);
       setSimMode(statusRes.data.simulation_mode ?? false);
-    } catch (e) { console.error('fetch error', e); }
+    } catch (e: any) { 
+      console.error('fetch error', e);
+      setError(e?.message || 'Failed to connect to backend');
+    }
     finally { setLoading(false); setRefreshing(false); }
   }, []);
 
@@ -211,6 +216,23 @@ export default function Dashboard() {
         <View style={s.centered}>
           <ActivityIndicator size="large" color="#0ea5e9" />
           <Text style={s.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !status) {
+    return (
+      <SafeAreaView style={s.container}>
+        <View style={s.centered}>
+          <Ionicons name="cloud-offline" size={48} color="#f87171" />
+          <Text style={s.errorTitle}>Connection Error</Text>
+          <Text style={s.errorText}>{error}</Text>
+          <Text style={s.errorHint}>Backend URL: {BACKEND_URL}</Text>
+          <TouchableOpacity style={s.retryBtn} onPress={() => { setLoading(true); fetchData(); }}>
+            <Ionicons name="refresh" size={18} color="#fff" />
+            <Text style={s.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -603,4 +625,11 @@ const s = StyleSheet.create({
   tradeRight:     { alignItems: 'flex-end', gap: 4 },
   tradePnl:       { fontSize: 14, fontWeight: '700' },
   tradeEntry:     { fontSize: 12, color: '#64748b' },
+
+  // Error state styles
+  errorTitle:     { fontSize: 20, fontWeight: '700', color: '#f87171', marginTop: 16 },
+  errorText:      { fontSize: 14, color: '#94a3b8', marginTop: 8, textAlign: 'center' as const, paddingHorizontal: 24 },
+  errorHint:      { fontSize: 11, color: '#475569', marginTop: 4, fontFamily: 'monospace' },
+  retryBtn:       { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, backgroundColor: '#0ea5e9', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8, marginTop: 20 },
+  retryBtnText:   { fontSize: 14, fontWeight: '600', color: '#fff' },
 });
