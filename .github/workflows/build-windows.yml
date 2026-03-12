@@ -76,7 +76,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: yarn install --frozen-lockfile
+        run: yarn install
 
       - name: Build frontend for web
         working-directory: frontend
@@ -89,7 +89,7 @@ jobs:
 
       - name: Install Electron dependencies
         working-directory: electron
-        run: yarn install --frozen-lockfile
+        run: yarn install
 
       - name: Create icon.ico if missing
         working-directory: electron
