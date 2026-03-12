@@ -1,16 +1,12 @@
-; installer.nsh — custom NSIS script included by electron-builder
-; Adds an Uninstall shortcut to the Desktop and Start Menu alongside the app shortcut.
+; Custom NSIS installer script for Trading Bot
+; Creates uninstall shortcut in Start Menu
 
 !macro customInstall
-  ; Desktop uninstall shortcut
-  CreateShortcut "$DESKTOP\Uninstall Trading Bot.lnk" "$INSTDIR\Uninstall Trading Bot.exe"
-
-  ; Start Menu uninstall shortcut (in the same folder as the app shortcut)
-  CreateShortcut "$SMPROGRAMS\Trading Bot\Uninstall Trading Bot.lnk" "$INSTDIR\Uninstall Trading Bot.exe"
+  ; Create Uninstall shortcut in Start Menu
+  CreateShortCut "$SMPROGRAMS\Trading Bot\Uninstall Trading Bot.lnk" "$INSTDIR\Uninstall Trading Bot.exe" "" "$INSTDIR\Uninstall Trading Bot.exe" 0
 !macroend
 
-!macro customUninstall
-  ; Clean up the uninstall shortcuts when uninstalling
-  Delete "$DESKTOP\Uninstall Trading Bot.lnk"
+!macro customUnInstall
+  ; Remove the uninstall shortcut
   Delete "$SMPROGRAMS\Trading Bot\Uninstall Trading Bot.lnk"
 !macroend

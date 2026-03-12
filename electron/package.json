@@ -31,7 +31,8 @@
       "styles.css",
       "assets/**/*",
       "web-dist/**/*",
-      "web-dist/_expo/**/*"
+      "web-dist/_expo/**/*",
+      "installer.nsh"
     ],
     "extraResources": [
       {
@@ -64,7 +65,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "menuCategory": "Trading Bot"
+      "menuCategory": "Trading Bot",
+      "uninstallDisplayName": "Trading Bot",
+      "shortcutName": "Trading Bot",
+      "include": "installer.nsh"
     },
     "portable": {
       "artifactName": "TradingBot-Portable.exe"

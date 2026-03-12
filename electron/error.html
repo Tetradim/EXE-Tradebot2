@@ -12,53 +12,163 @@
       padding: 24px; min-height: 100vh;
       display: flex; flex-direction: column; gap: 16px;
     }
-    h2 { color: #f87171; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+    h2 { 
+      color: #f87171; 
+      font-size: 1.2rem; 
+      display: flex; 
+      align-items: center; 
+      gap: 10px;
+    }
+    h2 span { font-size: 1.5rem; }
+    .hint { 
+      color: #94a3b8; 
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     .error-box {
-      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
-      padding: 16px; font-family: 'Consolas', 'Courier New', monospace;
-      font-size: 0.8rem; line-height: 1.6; color: #fca5a5;
-      white-space: pre-wrap; word-break: break-all;
-      user-select: text; cursor: text;
-      max-height: 60vh; overflow-y: auto; flex: 1;
+      background: #1e293b; 
+      border: 1px solid #334155; 
+      border-radius: 8px;
+      padding: 16px; 
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.8rem; 
+      line-height: 1.6; 
+      color: #fca5a5;
+      white-space: pre-wrap; 
+      word-break: break-all;
+      user-select: text; 
+      cursor: text;
+      max-height: 55vh; 
+      overflow-y: auto; 
+      flex: 1;
     }
-    .hint { color: #64748b; font-size: 0.75rem; }
-    .buttons { display: flex; gap: 10px; }
+    .error-box:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+    }
+    .buttons { 
+      display: flex; 
+      gap: 12px;
+      flex-wrap: wrap;
+    }
     button {
-      padding: 8px 20px; border: none; border-radius: 6px;
-      cursor: pointer; font-size: 0.875rem; font-weight: 500;
+      padding: 10px 24px; 
+      border: none; 
+      border-radius: 6px;
+      cursor: pointer; 
+      font-size: 0.875rem; 
+      font-weight: 500;
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    #copy-btn  { background: #3b82f6; color: white; }
+    button:active { transform: scale(0.98); }
+    #copy-btn { background: #3b82f6; color: white; }
     #copy-btn:hover { background: #2563eb; }
     #copy-btn.copied { background: #22c55e; }
+    #select-btn { background: #6366f1; color: white; }
+    #select-btn:hover { background: #4f46e5; }
     #close-btn { background: #334155; color: #e2e8f0; }
     #close-btn:hover { background: #475569; }
+    .footer-hint {
+      color: #475569;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .kbd {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: monospace;
+      font-size: 0.65rem;
+    }
   </style>
 </head>
 <body>
-  <h2>⚠️ Trading Bot — Startup Error</h2>
-  <p class="hint">Select and copy the error below to share for support:</p>
-  <div class="error-box" id="error-text">Loading...</div>
+  <h2><span>⚠️</span> Trading Bot — Startup Error</h2>
+  <p class="hint">Click the error box to select, then copy to share for support:</p>
+  <div class="error-box" id="error-text" tabindex="0">Loading...</div>
   <div class="buttons">
-    <button id="copy-btn">Copy Error</button>
-    <button id="close-btn">Close</button>
+    <button id="copy-btn"><span>📋</span> Copy Error</button>
+    <button id="select-btn"><span>🔍</span> Select All</button>
+    <button id="close-btn"><span>✕</span> Close</button>
   </div>
+  <p class="footer-hint">
+    Tip: Use <span class="kbd">Ctrl</span>+<span class="kbd">A</span> then <span class="kbd">Ctrl</span>+<span class="kbd">C</span> to copy manually
+  </p>
   <script>
-    // Error message is passed via the window title / URL hash from main.js
+    // Error message is passed via URL query param from main.js
     const params = new URLSearchParams(window.location.search);
     const msg = params.get('msg') || 'Unknown error';
-    document.getElementById('error-text').textContent = decodeURIComponent(msg);
+    const decodedMsg = decodeURIComponent(msg);
+    const errorBox = document.getElementById('error-text');
+    errorBox.textContent = decodedMsg;
 
-    document.getElementById('copy-btn').addEventListener('click', () => {
-      navigator.clipboard.writeText(decodeURIComponent(msg)).then(() => {
-        const btn = document.getElementById('copy-btn');
-        btn.textContent = 'Copied!';
-        btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = 'Copy Error'; btn.classList.remove('copied'); }, 2000);
+    // Copy button
+    document.getElementById('copy-btn').addEventListener('click', function() {
+      navigator.clipboard.writeText(decodedMsg).then(() => {
+        this.innerHTML = '<span>✓</span> Copied!';
+        this.classList.add('copied');
+        setTimeout(() => {
+          this.innerHTML = '<span>📋</span> Copy Error';
+          this.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {
+        // Fallback: select text and use execCommand
+        selectAllText();
+        document.execCommand('copy');
+        this.innerHTML = '<span>✓</span> Copied!';
+        this.classList.add('copied');
+        setTimeout(() => {
+          this.innerHTML = '<span>📋</span> Copy Error';
+          this.classList.remove('copied');
+        }, 2000);
       });
     });
 
+    // Select All button
+    function selectAllText() {
+      const range = document.createRange();
+      range.selectNodeContents(errorBox);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      errorBox.focus();
+    }
+
+    document.getElementById('select-btn').addEventListener('click', selectAllText);
+
+    // Close button
     document.getElementById('close-btn').addEventListener('click', () => {
       window.close();
+    });
+
+    // Triple-click to select all
+    errorBox.addEventListener('click', function(e) {
+      if (e.detail === 3) {
+        selectAllText();
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Ctrl+C when error box is focused
+      if (e.ctrlKey && e.key === 'c' && document.activeElement === errorBox) {
+        const selection = window.getSelection().toString();
+        if (selection) {
+          navigator.clipboard.writeText(selection);
+        }
+      }
+      // Escape to close
+      if (e.key === 'Escape') {
+        window.close();
+      }
     });
   </script>
 </body>
