@@ -50,12 +50,6 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
         }
       ],
       "icon": "assets/icon.png"
@@ -69,9 +63,6 @@
       "uninstallDisplayName": "Trading Bot",
       "shortcutName": "Trading Bot",
       "include": "installer.nsh"
-    },
-    "portable": {
-      "artifactName": "TradingBot-Portable.exe"
     },
     "publish": null
   },
