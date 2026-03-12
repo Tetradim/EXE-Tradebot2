@@ -85,7 +85,15 @@ jobs:
       - name: Copy web build to Electron
         run: |
           New-Item -ItemType Directory -Force -Path electron/web-dist
-          Copy-Item -Recurse frontend/dist/* electron/web-dist/
+          Copy-Item -Recurse -Force frontend/dist/* electron/web-dist/
+          Write-Host "Web-dist contents:"
+          Get-ChildItem -Recurse electron/web-dist | Select-Object FullName
+          Write-Host "Verifying _expo folder exists:"
+          if (Test-Path "electron/web-dist/_expo") {
+            Write-Host "✓ _expo folder found"
+          } else {
+            Write-Host "✗ _expo folder MISSING - build may fail"
+          }
 
       - name: Install Electron dependencies
         working-directory: electron

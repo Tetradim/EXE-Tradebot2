@@ -21,6 +21,7 @@
     "directories": {
       "output": "dist"
     },
+    "asar": true,
     "files": [
       "main.js",
       "preload.js",
@@ -29,7 +30,8 @@
       "error.html",
       "styles.css",
       "assets/**/*",
-      "web-dist/**/*"
+      "web-dist/**/*",
+      "web-dist/_expo/**/*"
     ],
     "extraResources": [
       {
