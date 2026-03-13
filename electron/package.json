@@ -25,10 +25,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "renderer.js",
-      "index.html",
       "error.html",
-      "styles.css",
       "assets/**/*",
       "web-dist/**/*",
       "web-dist/_expo/**/*",

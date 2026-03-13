@@ -1,12 +1,16 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn, execSync } = require('child_process');
 const http = require('http');
 
 let mainWindow;
 let backendProcess;
+let frontendServer;
 const BACKEND_PORT = 8001;
+const FRONTEND_PORT = 3000;
 const BACKEND_URL  = `http://localhost:${BACKEND_PORT}`;
+const FRONTEND_URL = `http://localhost:${FRONTEND_PORT}`;
 const isDev        = !app.isPackaged;
 
 function getBackendPath() {
@@ -14,10 +18,15 @@ function getBackendPath() {
   return path.join(process.resourcesPath, 'backend');
 }
 
+function getWebDistPath() {
+  if (isDev) return path.join(__dirname, 'web-dist');
+  return path.join(__dirname, 'web-dist');
+}
+
 function findPython() {
   const exePath = path.join(getBackendPath(), 'server.exe');
   try {
-    require('fs').accessSync(exePath);
+    fs.accessSync(exePath);
     return { exe: exePath, args: [], useExe: true };
   } catch (_) {}
 
@@ -37,6 +46,97 @@ function findPython() {
     } catch (_) {}
   }
   return null;
+}
+
+// ── Simple static file server for web-dist ────────────────────────────────────
+function startFrontendServer() {
+  return new Promise((resolve, reject) => {
+    const webDistPath = getWebDistPath();
+    console.log('[main] Web dist path:', webDistPath);
+
+    const mimeTypes = {
+      '.html': 'text/html',
+      '.js': 'application/javascript',
+      '.css': 'text/css',
+      '.json': 'application/json',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.ttf': 'font/ttf',
+    };
+
+    frontendServer = http.createServer((req, res) => {
+      let urlPath = req.url.split('?')[0];
+      
+      // Handle root and routes - serve index.html for SPA
+      if (urlPath === '/' || !path.extname(urlPath)) {
+        // Check if it's a known route or file
+        const possibleFile = path.join(webDistPath, urlPath);
+        const htmlFile = path.join(webDistPath, urlPath + '.html');
+        const indexFile = path.join(webDistPath, urlPath, 'index.html');
+        
+        if (fs.existsSync(htmlFile)) {
+          urlPath = urlPath + '.html';
+        } else if (fs.existsSync(indexFile)) {
+          urlPath = urlPath + '/index.html';
+        } else if (!fs.existsSync(possibleFile) || fs.statSync(possibleFile).isDirectory()) {
+          urlPath = '/index.html';
+        }
+      }
+
+      const filePath = path.join(webDistPath, urlPath);
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+
+      fs.readFile(filePath, (err, content) => {
+        if (err) {
+          if (err.code === 'ENOENT') {
+            // Serve index.html for client-side routing
+            fs.readFile(path.join(webDistPath, 'index.html'), (err2, indexContent) => {
+              if (err2) {
+                res.writeHead(404);
+                res.end('Not Found');
+              } else {
+                res.writeHead(200, { 'Content-Type': 'text/html' });
+                res.end(indexContent);
+              }
+            });
+          } else {
+            res.writeHead(500);
+            res.end(`Server Error: ${err.code}`);
+          }
+        } else {
+          res.writeHead(200, { 'Content-Type': contentType });
+          res.end(content);
+        }
+      });
+    });
+
+    frontendServer.listen(FRONTEND_PORT, '127.0.0.1', () => {
+      console.log(`[main] Frontend server running at ${FRONTEND_URL}`);
+      resolve();
+    });
+
+    frontendServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log('[main] Port 3000 in use, trying next port...');
+        // Port in use, the web might already be served
+        resolve();
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+function stopFrontendServer() {
+  if (frontendServer) {
+    frontendServer.close();
+    frontendServer = null;
+  }
 }
 
 function startBackend() {
@@ -74,7 +174,6 @@ function startBackend() {
     });
 
     // ── Resolve as soon as uvicorn prints startup complete ────────────────
-    // This fires whether the message appears on stdout or stderr
     function checkReady(text) {
       if (!settled && text.includes('Application startup complete')) {
         settled = true;
@@ -93,7 +192,7 @@ function startBackend() {
       const text = d.toString();
       stderrBuffer += text;
       console.error('[backend-err]', text.trim());
-      checkReady(text); // uvicorn logs startup complete to stderr too
+      checkReady(text);
       if (stderrBuffer.length > 4000) {
         stderrBuffer = '...(truncated)...\n' + stderrBuffer.slice(-4000);
       }
@@ -107,7 +206,6 @@ function startBackend() {
       ));
     });
 
-    // Process exited before startup complete — it crashed
     backendProcess.once('exit', code => {
       if (settled) return;
       settled = true;
@@ -119,7 +217,6 @@ function startBackend() {
       ));
     });
 
-    // Hard timeout — 120s should be plenty even for slow machines
     setTimeout(() => {
       if (settled) return;
       settled = true;
@@ -161,7 +258,8 @@ function createWindow() {
     backgroundColor: '#0f172a',
   });
 
-  mainWindow.loadFile('index.html');
+  // Load the frontend from local HTTP server
+  mainWindow.loadURL(FRONTEND_URL);
   mainWindow.once('ready-to-show', () => mainWindow.show());
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -192,7 +290,11 @@ function showErrorWindow(message) {
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   try {
+    // Start frontend server first
+    await startFrontendServer();
+    // Then start backend
     await startBackend();
+    // Finally create the window
     createWindow();
   } catch (err) {
     console.error('[main] Startup failed:', err.message);
@@ -206,12 +308,17 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   stopBackend();
+  stopFrontendServer();
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', stopBackend);
+app.on('before-quit', () => {
+  stopBackend();
+  stopFrontendServer();
+});
 
 // ── IPC handlers ──────────────────────────────────────────────────────────────
 ipcMain.handle('get-backend-url',  () => BACKEND_URL);
+ipcMain.handle('get-frontend-url', () => FRONTEND_URL);
 ipcMain.handle('get-app-version',  () => app.getVersion());
 ipcMain.handle('get-data-path',    () => app.getPath('userData'));
