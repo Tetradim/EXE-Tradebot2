@@ -248,6 +248,7 @@ function createWindow() {
     minWidth:  1000,
     minHeight: 700,
     show: false,
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration:  false,
       contextIsolation: true,
@@ -257,6 +258,10 @@ function createWindow() {
     title: 'Trading Bot',
     backgroundColor: '#0f172a',
   });
+
+  // Remove the menu bar completely
+  mainWindow.setMenuBarVisibility(false);
+  mainWindow.setMenu(null);
 
   // Load the frontend from local HTTP server
   mainWindow.loadURL(FRONTEND_URL);

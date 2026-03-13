@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Switch, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,10 +90,19 @@ function SwitchRow({ label, sub, value, onChange, accent = '#0ea5e9' }: {
         <Text style={s.switchLabel}>{label}</Text>
         {sub && <Text style={s.switchSub}>{sub}</Text>}
       </View>
-      <Switch value={value} onValueChange={onChange}
-        trackColor={{ false: '#1e2d3d', true: accent }} thumbColor="#fff"
-        style={{ transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }] }}
-      />
+      <TouchableOpacity 
+        style={[
+          s.customSwitch, 
+          { backgroundColor: value ? accent : '#1e2d3d' }
+        ]} 
+        onPress={() => onChange(!value)}
+        activeOpacity={0.8}
+      >
+        <View style={[
+          s.customSwitchThumb,
+          { transform: [{ translateX: value ? 18 : 0 }] }
+        ]} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -1048,6 +1057,25 @@ const s = StyleSheet.create({
   switchLeft:   { flex: 1 },
   switchLabel:  { fontSize: 14, fontWeight: '600', color: '#e2e8f0' },
   switchSub:    { fontSize: 12, color: '#475569', marginTop: 1 },
+  
+  customSwitch: { 
+    width: 44, 
+    height: 26, 
+    borderRadius: 13, 
+    padding: 3,
+    justifyContent: 'center',
+  },
+  customSwitchThumb: { 
+    width: 20, 
+    height: 20, 
+    borderRadius: 10, 
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
 
   quickRow:     { flexDirection: 'row', gap: 6, marginBottom: 6, flexWrap: 'wrap' },
   quickBtn:     { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 7, backgroundColor: '#1e2d3d' },

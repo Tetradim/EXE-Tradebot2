@@ -7,9 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 
 const TABS = [
   { name: 'index',       label: 'Dashboard', icon: 'pulse',            iconActive: 'pulse'            },
-  { name: 'positions',   label: 'Positions', icon: 'briefcase-outline', iconActive: 'briefcase'        },
-  { name: 'trades',      label: 'Trades',    icon: 'receipt-outline',   iconActive: 'receipt'          },
   { name: 'alerts',      label: 'Alerts',    icon: 'notifications-outline', iconActive: 'notifications' },
+  { name: 'trades',      label: 'Trades',    icon: 'receipt-outline',   iconActive: 'receipt'          },
+  { name: 'positions',   label: 'Positions', icon: 'briefcase-outline', iconActive: 'briefcase'        },
   { name: 'settings',    label: 'Settings',  icon: 'settings-outline',  iconActive: 'settings'         },
 ] as const;
 
